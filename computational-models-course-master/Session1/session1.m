@@ -5,18 +5,38 @@
 % this sets up the 'schedule', i.e. which option is rewarded on each trial
 
 fixedProb = 0.8;    % this is the true probability that green is rewarded
-startingProb = 0.5;  % this defines the model's estimated pronbabilty on the very first trial
-alpha = 0.05;         % this is the model's learning rate
+startingProb = 0.5;  % this defines the model's estimated probabilty on the very first trial
+alpha = 0.05;         % this is the model's learning rate; default 0.05
 nTrials = 200;       % this is the number of trials
-trueProbability = ones(1,nTrials)*fixedProb; %reward probability on each trial
+trueProbability = ones(1,nTrials)*fixedProb; %reward probability on each trial; ones(1, nTrials) → creates a row vector of length nTrials (200) filled with 1s.
+                        % Each element in the vector is multiplied by
+                        % fixedProb (0.8). 1*0.8, 1*0.8...etc.
+                        % So the vector becomes [0.8, 0.8, 0.8, ..., 0.8] of length 200.
+
+% REVERSALS switch of probability through a mat file
+% overwrites trueProbability with a schedule that reverses
+D = load('schedule.mat'); % trials 1–17 → 0.2 (green rewarded only 20% of the time); 18–51 → 0.8 (green rewarded 80% of the time);
+                          % 52–68 → back to 0.2; 69–102 → 0.8 again; 103–200 → stabilises at 0.25 (green rewarded 25% of the time for the rest of the experiment).
+% view it schedule.mat
+whos -file schedule.mat
+trueProbability = D.trueProbabilityStored; % To get the actual vector out of D, you use a dot .:
+nTrials = length(trueProbability);
 
 % now, we'll simulate whether green was rewarded on every trial
-opt1Rewarded(1:nTrials) = rand(1,nTrials) < trueProbability;
+opt1Rewarded(1:nTrials) = rand(1,nTrials) < trueProbability; % Generates a row vector of random numbers (UNIFORM DISTRIBUTION) between 0 and 1, of length nTrials (here, 200).
+                                % trueProbability is your vector of true reward probabilities (all 0.8 here).
+                                % The < operator compares each random number to the corresponding element in trueProbability.
+                                % example outcome: opt1Rewarded = [1 1 0 1 1 0 1 ...]  % 1 = rewarded, 0 = not rewarded
+                                % The < operator compares each random number to the corresponding element in trueProbability.
+                                % Over many trials, the fraction of rewards
+                                % will approximate trueProbability (0.8 here). WHy? 
+                                % You generate a random number between 0 and 1. If the number is less than 0.8 → you get a reward.
 
 %plot the schedule on each trial, and the fixed probability of reward
-figure(1);clf;hold on;plotIndex = [];
-plotIndex(1) = plot(trueProbability,'k--','LineWidth',2); 
-plotIndex(2) = plot(opt1Rewarded,'g*','MarkerSize',10);
+figure(1);clf;hold on;plotIndex = []; % clf clears the figure so it's fresh; hold on allows you to plot multiple things on the same axes.
+plotIndex(1) = plot(trueProbability,'k--','LineWidth',2); % trueProbability is your ground truth (e.g. always 0.8). 'k--' → black dashed line.
+%'LineWidth',2 → makes the line thicker for visibility.
+plotIndex(2) = plot(opt1Rewarded,'g*','MarkerSize',10); % 'g*' → green star markers.
 xlim([0 nTrials]); %sets the x axis
 xlabel('Trial number'); %labels it
 ylim([0 1]); %sets the y axis
@@ -24,7 +44,8 @@ ylabel('Green rewarded?'); %labels it
 legend(plotIndex, {'True Probability' 'Trial outcomes'});
 
 % EXERCISE A: open up RL_model.m, and complete the last two lines of code
-probOpt1 = RL_model(opt1Rewarded,alpha,startingProb);
+probOpt1 = RL_model(opt1Rewarded,alpha,startingProb); % RL_model is a function (in RL_model.m) with three arguments;  
+% probOpt1 is the model’s estimated probability that green is rewarded on each trial.
 
 %once you've successfully coded your RL_model, you can then plot the model's
 %estimated probabilities (on top of the plot above)
