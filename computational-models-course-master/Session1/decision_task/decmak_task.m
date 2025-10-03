@@ -1,3 +1,17 @@
+
+%NK
+addpath(genpath('/Users/nomikikoutsoubari/Documents/GitHub/RL_Oxford_Nomi_notes-answers/computational-models-course-master/Session1/decision_task/Psychtoolbox'));
+savepath
+
+% First time only
+    % SetupPsychtoolbox
+
+cd('/Users/nomikikoutsoubari/Documents/GitHub/RL_Oxford_Nomi_notes-answers/computational-models-course-master/Session1/decision_task/Psychtoolbox');
+
+  %  SetupPsychtoolbox; % Your free trial is active for 13 more days, until
+  %  Fri Oct 17 13:08:02 2025 ; to rerun: Rebuild Psychtoolbox from source (free, no license needed).
+
+%% 
 % Clear the workspace and the screen
 Screen('CloseAll');
 close all;
