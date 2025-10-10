@@ -11,14 +11,18 @@ close all
 
 % #1) Set the path by modifying the line below to where you have stored the
 % scripts for this practical:
-MatlabCodePath   = '/Users/nkolling/Documents/teaching/UndergraduateTeaching/NewVersionAdvancedPractical';
-simulatedDataPath='/Users/nkolling/Documents/teaching/UndergraduateTeaching/NewVersionAdvancedPractical/simulatedData'; 
+MatlabCodePath   = '/Users/nomikikoutsoubari/Documents/GitHub/RL_Oxford_Nomi_notes-answers/computational-models-course-master/Session2';
+simulatedDataPath='/Users/nomikikoutsoubari/Documents/GitHub/RL_Oxford_Nomi_notes-answers/computational-models-course-master/Session2/simulatedData'; 
 % the following line tells Matlab to look for scripts and data in this
 % folder and the folders within this path
 addpath(genpath(MatlabCodePath)) 
 
 % This line loads an example schedule we will use for this session
-load('stable_first_aversive_schedule.mat','trialVariables');
+load('stable_first_aversive_schedule.mat','trialVariables');whos % Loads only the variable called trialVariables from the file.
+fieldnames(trialVariables) % NK
+T = struct2table(trialVariables); % NK for me to understand
+open T
+
 
 % From this loaded information, we now know the reward outcomes (i.e.
 % getting a reward or not on each trial). This is what the the reinforcement
@@ -37,7 +41,7 @@ numtrials= length(opt1Rewarded);                        % number of trials in th
 % with which the model learns. Later in the session today, we will look at 
 % what happens if you change the learning rate, but for now pick a
 % relatively low one between 0.05 and .3
-alpha = 0.05;
+alpha = 0.05; % default 0.05
 
 % Pre-define the variables that we want to compute:
 % In Matlab it is useful to define how many entries variables will have
@@ -46,6 +50,9 @@ alpha = 0.05;
 % you to check whether you have coded everything correctly by checking that
 % each entry has gotten filled and that the size of the variables after a
 % loop is the same as before
+
+% Creates two column vectors (each of length numtrials).Fills them
+% initially with NaN; ou'll later fill each entry inside a loop that runs through trials.
 probOpt1 = nan(numtrials,1); % Predictions about whether there will be a reward if option 1 is selected
 delta            = nan(numtrials,1);   % Prediction errors on each trial
 
@@ -98,9 +105,11 @@ title(['Reinforcement learner with learning rate ' num2str(alpha)])
 % plot the number inside learning rate as a string. 2) the square brackets
 % ([]) mean that matlab should concatenate the title using the text inside
 % the quotation marks ('') and the number inside alpha)
-legend('True Probability','Outcomes opt1','Predictions') % note: the legends are entered in the order in which the variables were added to the plot
+legend('True Probability','Outcomes opt1','Predictions'); % note: the legends are entered in the order in which the variables were added to the plot
 ylim([-0.1 1.1]) % this tells Matlab to extend the y-axes from -0.1 to 1.1. We are doing this because the '*'s for outcomes are otherwise on the axes
 set(gca,'Fontsize',16);
+set(gcf, 'Color', 'w');      % sets figure background NK
+set(gca, 'Color', 'w');      % sets axes background NK
 
 subplot(2,1,2);
 plot(magOpt1,'g');hold on;plot(magOpt2,'b')
@@ -109,12 +118,58 @@ ylabel('Magnitude')
 title(['Magnitudes throughout the task']) 
 legend({'Magnitude of option 1';'Magnitude of option 2'}) 
 set(gca,'Fontsize',16);
+% set(gcf, 'Color', 'w');      % sets figure background NK
+% set(gca, 'Color', 'w');      % sets axes background NK
+set(findall(gcf,'Type','Legend'), 'Color', 'w', 'Box', 'off', 'TextColor', 'k'); % NK change to transparent legends
+
 
 % Possible Question Point about RF learners. Etc. 1) What happens if Alpha
 % is changed. 2) What happens if alpha can change freely from trial to
 % trial?  3) How could you learn about multiple things? What might be a problem if you dont see an option outcome for an extended period of time
 % 4) What happens with forgetting?
 
+
+
+%NK: 
+% 1)
+   % Low alpha → smooth blue line in the prediction plot (not so smooth for the volatile block)
+   % High alpha → jagged blue line that tracks outcomes more closely(smoother for volatile block)
+
+% 2)
+  % dynamic or adaptive learning rate: Instead of a fixed a, the learner
+  % adjusts: at = f(uncertainty at trial t)
+  % how much it updates based on uncertainty or volatility in the environment. 
+  % The learner can approximate Bayesian optimal learning (Behrens et al., 2007)
+  % Learns efficiently across both stable and volatile blocks
+  % Needs more computation/complexity
+  % Harder to implement psychologically in simple models
+
+% 3)
+  % If there are two or more independent options, you could hold separate predictions for each
+  % Each updated independently with its own delta
+  % Problem if an option is not observed for many trials:
+        % Its prediction does not get updated, so it becomes stale
+        % The learner may overestimate or underestimate its value when finally chosen
+        % This is why some models include forgetting or decay for unobserved options
+        % in the current model: probOpt2 = 1 - probOpt1; learning about one
+        % automatically tells you about the other - not independent
+
+% 4)
+  % Forgetting can be implemented by decaying past predictions toward a baseline (e.g., 0.5) over time:
+  % λ = forgetting rate (0 = no forgetting, 1 = total reset)
+    % Effect:
+    % Older outcomes have less influence
+    % Can help in volatile environments (don't overweight old info)
+    % But in stable environments, forgetting may make learning less accurate, as you lose long-term memory
+    % Example:
+    % No forgetting → predictions converge smoothly to true probability
+    % With forgetting → predictions fluctuate more, don't reach exact probability
+
+% Question	                    Effect / Concept
+% Alpha change	                High alpha → fast, sensitive learning; Low alpha → slow, stable learning
+% Alpha varies trial-to-trial	    Learner adapts to volatility → Bayesian-like behavior
+% Learning multiple options	    Need separate predictions; problem if an option not seen → stale predictions
+% orgetting	Older outcomes      decay → faster adaptation in volatile environments, but less stable in stable environments
 
 %% Integration of estimated/learned reward probability with shown magnitudes
 % Now that we have a first estimate of how people might be
@@ -129,24 +184,35 @@ set(gca,'Fontsize',16);
 % Simply multiply the magnitude of each option with its probability to
 % create another vector/variable called utility1 and utility 2
 
-keyboard
-utility1= ;  % Tip: use   magOpt1 probOpt1
-utility2= ;  % Tip: use   magOpt1 probOpt1
-%
+keyboard;
+ % you want is element-wise multiplication, which uses .*
+utility1 = probOpt1 .* magOpt1;   % Option 1 utility  % Tip: use   magOpt1 probOpt1
+utility2 = probOpt2 .* magOpt2;   % Option 2 utility  % Tip: use   magOpt2 probOpt2
+
 
 % Now combute the decision variable by combining/comparing the two options
 % utilities for every trial. For our script compute the DecisionVariable in
 % favour of option 1 choices.
 keyboard;
-DecisionVariable=; % Tip: use utility1 and utility2
-%
+DecisionVariable = utility1 - utility2; % Tip: use utility1 and utility2
+% If utility1 > utility2, the decision variable is positive, meaning the model favors option 1.
+% If utility1 < utility2, the decision variable is negative, meaning the model favors option 2.
+% If they are equal, the decision variable is 0 → the model is indifferent.
 
-SoftmaxLineX=(min(DecisionVariable):max(DecisionVariable));
 
-inverseT=.2;   % pick an inverse Temperature, i.e. degrees of stochasticy or randomness
+SoftmaxLineX=(min(DecisionVariable):max(DecisionVariable)); % creates a linearly spaced vector from he min to  max value of DecisionVariable in steps of 1 (default in MATLAB)
+% inverseT = Small values → high randomness (choices are more uniform)
+% inverseT = Large values → more deterministic choices (the higher utility is chosen almost always)
+inverseT=.2;   % default here = .2 (fairly stochastic) pick an inverse Temperature, i.e. degrees of stochasticy or randomness
+
+% Softmax function for two options (utility 1 and utility 2)
 ChoiceProbability1(:,1)=(exp(utility1.*inverseT))./(exp(utility1.*inverseT) + exp(utility2.*inverseT));
-ChoiceProbability2(:,1)=1-ChoiceProbability1(:,1);
-SoftmaxLineY(:,1)=1./(exp(SoftmaxLineX.*-inverseT)+1);
+ChoiceProbability2(:,1)=1-ChoiceProbability1(:,1); % Since there are only two options, the probability of choosing option 2 is just the complement of option 1.
+SoftmaxLineY(:,1)=1./(exp(SoftmaxLineX.*-inverseT)+1); % related to the softmax / logistic function
+% SoftmaxLineX is basically the x-axis for your softmax curve. It is used instead of utility1 - utility2, 
+% which is common for plotting a smooth softmax curve across a range of decision variable differences.
+% ChoiceProbability1 stores the probability of choosing option 1 for each trial or value.
+
 
 
 figure('color',[1 1 1],'name','Softmax with choice probability of all trials');
@@ -155,19 +221,48 @@ plot(DecisionVariable,squeeze(ChoiceProbability1),'x')
 xlabel('subjective Utility Difference (A-B)');ylabel('Probability of Choosing Option A');
 set(gca,'Fontsize',16);
 legend({'Softmax function';'Single Trial probability'});
+set(gcf, 'Color', 'w');      % sets figure background NK
+set(gca, 'Color', 'w');      % sets axes background NK
+
+% X-axis (SoftmaxLineX): the decision variable
+       % Often the difference in utility between the two options:u1-u2
+       % Negative values → option 2 is better
+       % Zero → both options are equal
+       % Positive → option 1 is better
+
+% Y-axis (SoftmaxLineY): the probability of choosing option 1
+       % Values range from 0 → 1
+       % Shows how likely the model is to choose option 1 as the decision variable changes
+
+% How it looks
+       % S-shaped curve (sigmoid):
+        % At large negative DV → probability of choosing option 1 ≈ 0
+        % At DV = 0 → probability ≈ 0.5 (random choice)
+        % At large positive DV → probability ≈ 1
+
+    % Steepness depends on inverse temperature (inverseT):
+    % High inverseT → steep, almost deterministic
+    % Low inverseT → shallow, more stochastic
 
 %% Generating actual choices from choice probabilities
+
+% To simulate what an actual participant would do, you now need to turn those probabilities into discrete choices (A or B)
+
 % Now that we have choice probabilities we are almost there! 
-NrSimAgents=80;
+NrSimAgents=80; % simulate XNr of sim participants
 for isub=1:NrSimAgents    % Lets make a for-loop for the number of agents we want to simulate
   % Lets generate some choices by first generating some random numbers between 0 and 1
-RandNrs=rand(length(ChoiceProbability1),1);
+RandNrs=rand(length(ChoiceProbability1),1); % rand(n,1) generates a column vector of random numbers between 0 and 1 — one random number per trial.
+
 % Then we compare those numbers with the Choice Probability of A to
 % determine whether A was "choosen" by the simulated agent in that specific trial
-Chosen1=RandNrs<=ChoiceProbability1; % If the randomnumber is below or equal the A Choice probability then A was choosen.
+Chosen1=RandNrs<=ChoiceProbability1; % this converts probabilities into actual choices.
+% If the randomnumber is below or equal the A Choice probability then A was choosen.
 % If A isn't chosen, as it is a binary forced choice experiment, B must have been.
-ChosenB=~Chosen1;  % The ~ sign means false, i.e. it gives a true/1 if Chosen A is false/0
-SimulatedChoices1(:,isub)=Chosen1; % Now we just have to save the choices in the column of the agent in the loop
+
+ChosenB=~Chosen1;  % The ~ sign means false, i.e. it gives a true/1 if Chosen A is false/0; If A wasn't chosen (Chosen1 = 0), B must have been chosen
+
+SimulatedChoices1(:,isub)=Chosen1; % Now we just have to save the choices of Option A in the column of the agent in the loop (in a matrix)
 end
 
 
@@ -175,23 +270,38 @@ end
 % at least not immediately before running any models, we can also plot the 
 % Softmax against objective utiltiy using our knowledge of the true
 % underlying probabilities.
+% Before fitting your model to data, you don't yet know what those subjective utilities are (they depend on parameters like learning rate, which you haven't estimated yet).
+% So, to visualize how the model behaves in principle, you can use the objective (true) utilities — what's actually true in the task — as a stand-in.
+% That's what this code does.
 
-ActualUtilityA=trueProbabilityOpt1.*magOpt1;
-ActualUtilityB=(1-trueProbabilityOpt1).*magOpt2;
-DecisionVariableObjective=ActualUtilityA-ActualUtilityB;
- 
+% Objective utility for Option 1
+ActualUtilityA=trueProbabilityOpt1.*magOpt1;% the true probability that option 1 gives a reward (from your task design). magOpt1 = the reward magnitude associated with option 1. Their product is the expected value/utility for 1
+% Objective expected utility of option B
+ActualUtilityB=(1-trueProbabilityOpt1).*magOpt2; % the probability of reward for option B is 1 - trueProbabilityOpt1
+
+DecisionVariableObjective=ActualUtilityA-ActualUtilityB; %  compute the difference in objective utility between the two options
+% This is the decision variable that the softmax function will later use as input to calculate the probability of choosing A
+% You're creating a "theoretical" or "ideal observer" version of your model — one that knows the true underlying structure of the task (true reward probabilities × magnitudes).
 
 % Now we can plot whether the choices we generated roughly follow the
-% objective utility by binning A choices by the the objective Decision
-% Variable. [Reminder: A perfect agent should have a step function at 0]
-BinBorders=-80:20:80; % Lets go with -80 to 80 in steps of 20.
+% objective utility (— i.e. the values that participants perceive or estimate internally) 
+% Transforms trial-by-trial simulated data into a summary plot that shows how choice behavior depends on the decision variable (difference in objective utilities).
+% The goal here is to check whether the simulated agents behave sensibly — i.e., do they choose option A more often when it's objectively better?
+% by binning A choices by the the objective DecisionVariable. [Reminder: A perfect agent should have a step function at 0]
+BinBorders=-80:20:80; % Lets go with -80 to 80 in steps of 20. hese bins divide the range of possible decision variable (DV) values into chunks of width 20.
 BinCentre=mean([BinBorders(1:end-1)' BinBorders(2:end)'],2); % Lets compute the centre of the bin so that we know where to plot.
-for B=1:(length(BinBorders)-1)  % Loop over all Bins
-    % Find what samples are included in the current bin using larger and
+for B=1:(length(BinBorders)-1)  % Loop over all Bins (B indexes bins).
+    % Find what samples/trials are included in the current bin using larger and
     % smaller as 
     CurrentIndex=repmat((DecisionVariableObjective>=BinBorders(B)) & (DecisionVariableObjective<BinBorders(B+1)),1,size(SimulatedChoices1,2)); 
-    for a=1:size(SimulatedChoices1,2)
+    
+    % This gives you one mean per bin per agent.
+    for a=1:size(SimulatedChoices1,2) % for every simulated agent.
         BinValue(B,a)=mean(SimulatedChoices1(CurrentIndex(:,a),a)); % Compute the average choices for the current bin
+            % SimulatedChoices1(:,a) = the vector of that agent's A-choices across all trials (1 = chose A, 0 = chose B).
+            % CurrentIndex(:,a) = logical vector marking which trials fall into the current bin.
+            % SimulatedChoices1(CurrentIndex(:,a), a) = subset of choices for that agent within that bin.
+            % mean(...) = the proportion of A choices in that bin (since mean of 0/1 = proportion of 1s).
     end
 end
 % Now plot the binned values at the currect locations in the middle of the bin boarders
@@ -202,7 +312,7 @@ xlabel('objective Utility Difference (A-B)');ylabel('Probability of Choosing Opt
 set(gca,'Fontsize',16);
 
 
-
+%%%% I AM HERE!!!! %%%%
 
 % Now that we have simulated many agents with exactly the same combination
 % of Learning rate and temperature, we want to make sure that our analyses

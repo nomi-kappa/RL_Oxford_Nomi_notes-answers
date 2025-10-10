@@ -65,12 +65,24 @@ legend(plotIndex, {'True Probability' 'Trial outcomes' 'RL model probability'});
 
 
 %% 3. How many trials do we look back into the past with different alphas?
+    % The goal of this code is to visualize how much influence past trials
+    % have in an exponentially weighted learning rule, depending on the learning rate.
+    % α determines how quickly past information is forgotten — i.e., how much weight is given to recent vs. older trials.
 
-alpha = 0.15;
+alpha = 0.15; % means that 15% of the new information is incorporated each trial. 
+              % The remaining 85% (1-a = 0.85) of the belief or estimate is carried over from the past.
 
+
+% We are computing the effective weight that a trial t in the past contributes to the current estimate after T total trials.
 T = 25;
 for t = 1:T             
     % EXERCISE D. explain/derive the following equation:
+        % the weight(t) formula: comes from the mathematical form of an exponential moving average (EMA) — which is the core of many RL and prediction update rules.
+        % The most recent trial (t = T) contributes:(1−α) (T−(T−1)) ⋅α=(1−α) 1 ⋅α=0.85×0.15 → slightly smaller.
+        % Two trials before that: (1−α) 2 ⋅α=0.85 2 ×0.15 → even smaller, and so on.
+        % So this creates an exponential decay of influence — older trials matter less.
+        % T-t 1st trial, 0.15*0.85, 2nd trial 0.15*0.85^2, 5th trial
+        % 0.15*0.85^5...etc
     weight(t) = (1-alpha).^(T-t)*alpha; 
 end
 
