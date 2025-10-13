@@ -37,6 +37,10 @@ magOpt2  = trialVariables.magOpt2;
 numtrials= length(opt1Rewarded);                        % number of trials in the experiment
 
 %% Building a simple reinforcement learner
+
+% - Simulates how an agent learns reward probabilities from feedback.
+% - Pre-allocation improves efficiency and ensures correct dimensions.
+
 % Before we can run a reinforcment learner ,we need to define a learning rate 
 % with which the model learns. Later in the session today, we will look at 
 % what happens if you change the learning rate, but for now pick a
@@ -83,7 +87,17 @@ probOpt2=1-probOpt1;
 % independent from each other. 
 
 
-%% Looking at the predictions from our reinforcement learner
+%% Looking at the predictions from our reinforcement learner (PLOT predictions)
+
+% What:
+    %Plots:
+%True probabilities and model predictions over trials.
+%Reward magnitudes for both options over trials.
+% Why:
+%Visualizes how well the learner tracks the underlying reward probabilities.
+%Helps understand the effect of alpha and the learning process.
+
+% ------
 % Let's plot the predictions of the reinforcement learner over the course
 % of the experiment 
 % this command opens a new figure in Matlab:
@@ -171,7 +185,18 @@ set(findall(gcf,'Type','Legend'), 'Color', 'w', 'Box', 'off', 'TextColor', 'k');
 % Learning multiple options	    Need separate predictions; problem if an option not seen → stale predictions
 % orgetting	Older outcomes      decay → faster adaptation in volatile environments, but less stable in stable environments
 
-%% Integration of estimated/learned reward probability with shown magnitudes
+%% Integration of estimated/learned reward probability with shown magnitudes (UTILITIES)
+
+% What:
+    % Computes utility as probability × magnitude for each option.
+    % Calculates a decision variable as utility1 - utility2.
+    % Applies softmax to transform utilities into choice probabilities.
+    % Plots the softmax curve and trial-by-trial probabilities.
+% Why:
+    % Combines learned probabilities with task rewards to simulate decisions.
+    % Softmax converts values into realistic stochastic choice probabilities.
+
+% ------
 % Now that we have a first estimate of how people might be
 % learning/infering the reward probability we used to generate the
 % schedule, we need to find a way to combine this information with the
@@ -244,8 +269,20 @@ set(gca, 'Color', 'w');      % sets axes background NK
     % High inverseT → steep, almost deterministic
     % Low inverseT → shallow, more stochastic
 
-%% Generating actual choices from choice probabilities
+%% Generating actual choices from choice probabilities (OBJECTIVE UTILITIES)
 
+    % this part is simulating many agents with the same inverseT/learning rate and without trial-by-trial learning variability. 
+    % The variability between agents only comes from the random numbers used to turn probabilities into discrete choices, not from differences in α or β.
+ 
+    % What:
+        % Simulates NrSimAgents agents.
+        % Generates random numbers to turn choice probabilities into actual choices (Chosen1, ChosenB).
+        % Plots binned probabilities of choosing option A based on decision variable.
+    % Why:
+        % Converts probabilities into discrete simulated behavior.
+        % Tests if the model behaves sensibly according to the objective utilities.
+
+% ------
 % To simulate what an actual participant would do, you now need to turn those probabilities into discrete choices (A or B)
 
 % Now that we have choice probabilities we are almost there! 
@@ -266,8 +303,8 @@ SimulatedChoices1(:,isub)=Chosen1; % Now we just have to save the choices of Opt
 end
 
 
-% As we don't actually know the exact subjective utility of our subjects,
-% at least not immediately before running any models, we can also plot the 
+% !!!!! As we don't actually know the exact subjective utility of our subjects,
+% at least not immediately before running any models, we can also plot the
 % Softmax against objective utiltiy using our knowledge of the true
 % underlying probabilities.
 % Before fitting your model to data, you don't yet know what those subjective utilities are (they depend on parameters like learning rate, which you haven't estimated yet).
@@ -284,10 +321,11 @@ DecisionVariableObjective=ActualUtilityA-ActualUtilityB; %  compute the differen
 % You're creating a "theoretical" or "ideal observer" version of your model — one that knows the true underlying structure of the task (true reward probabilities × magnitudes).
 
 % Now we can plot whether the choices we generated roughly follow the
-% objective utility (— i.e. the values that participants perceive or estimate internally) 
+% objective utility (i.e. the values that participants perceive or estimate internally) 
 % Transforms trial-by-trial simulated data into a summary plot that shows how choice behavior depends on the decision variable (difference in objective utilities).
 % The goal here is to check whether the simulated agents behave sensibly — i.e., do they choose option A more often when it's objectively better?
-% by binning A choices by the the objective DecisionVariable. [Reminder: A perfect agent should have a step function at 0]
+% by binning A choices by the the objective DecisionVariable. [Reminder: A perfect agent should have a step function at 0]!!-->
+% At decision variable = 0 (i.e., equal utilities), the agent suddenly switches from always choosing B to always choosing A.
 BinBorders=-80:20:80; % Lets go with -80 to 80 in steps of 20. hese bins divide the range of possible decision variable (DV) values into chunks of width 20.
 BinCentre=mean([BinBorders(1:end-1)' BinBorders(2:end)'],2); % Lets compute the centre of the bin so that we know where to plot.
 for B=1:(length(BinBorders)-1)  % Loop over all Bins (B indexes bins).
@@ -310,33 +348,65 @@ plot(repmat(BinCentre,1,size(BinValue,2)),BinValue,'.-');hold on;
 errorbar(BinCentre,mean(BinValue,2),std(BinValue,0,2)./(size(BinValue,2).*.5),'k','Linewidth',1);
 xlabel('objective Utility Difference (A-B)');ylabel('Probability of Choosing Option A');
 set(gca,'Fontsize',16);
+% "When the utility of A was this much higher (or lower) than B, how often did the agent choose A?"
 
 
-%%%% I AM HERE!!!! %%%%
+%% Simulation with a distribution of learning rate and inverse temperature (does this mean it is different for each participant?)
+ % SUBJECTIVE UTILITIES
+ % Computes objective decision variable and plots binned choices.
 
+% What:
+    % Samples individual learning rates (alpha) and inverse temperatures (beta) from distributions.
+    % Creates a factorial design with stable/volatile schedules and aversive/appetitive conditions.
+    % Plots distributions of simulated parameters.
+% Why:
+    % Simulates inter-individual variability, making simulations more realistic.
+    % Useful for testing model recovery: can the fitting procedure recover true parameters?
+% How:
+    % here the learning rate (α) and inverse temperature (β) are sampled from distributions and therefore different for each simulated agent.
+
+%---------
 % Now that we have simulated many agents with exactly the same combination
 % of Learning rate and temperature, we want to make sure that our analyses
 % later are also sensitive when there is a distribution of both. In other
-% words we are interested in later seeing the fitting recover both the
-% average learning rates and temperatures for the agents as well as their
+% words !!we are interested in later seeing the fitting recover both the
+% average learning rates and temperatures !!for the agents as well as their
 % variability around the group mean. This will ensure that our estimate of
 % average model parameter is valid as well as any individual difference
-% analysis we might want to do. To show you later how it looks when there
-% are insufficient samples for recovering the true parameters from a
-% simulation, we will also simulate a situation with far too few (or uninformative) trials.
+% analysis we might want to do. 
+% 
+% To show you later how it looks when there are insufficient samples for recovering
+% the true parameters from a simulation, we will also simulate a situation with far too few (or uninformative) trials.
 
 Stable1stAversive  =load('stable_first_aversive_schedule.mat','trialVariables');
 Stable1stNeutral   =load('stable_first_neutral_schedule.mat','trialVariables');
 Volatile1stAversive=load('volatile_first_aversive_schedule.mat','trialVariables');
 Volatile1stNeutral =load('volatile_first_neutral_schedule.mat','trialVariables');
 
+% factorial design: 2 (Order: stable-first / volatile-first) × 2 (Valence: aversive / appetitive)
+% 80 agents in these conditions:
+% "stable" vs. "volatile" reward schedules, and
+% "appetitive" (reward-based) vs. "aversive" (loss-avoidance) conditions.
+% "Of the 80 samples we have 20 in each of the four schedule categories."
+    % Agents 1–40 experience a stable environment first (then volatile later).
+    % Agents 41–80 experience the volatile environment first (then stable later).
+    % So "stable first" vs. "volatile first" defines a between-subjects factor (or block order).
+        % Valence:
+        % first 20 agents in each order group (stable-first and volatile-first) are aversive.
+        % next 20 agents in each order group are appetitive.
 
 % Of the 80 Samples we have 20 in each of the for schedule categories. For
 % simplicity of structure, lets say the first 40 are stable first and the
 % first 20 of stable and volatile first are in the aversive condition.
-Stable1st        =[true(40,1);false(40,1)];
+
+Stable1st =[true(40,1);false(40,1)];% creates a logical vector (80×1) marking which agents have the "stable-first" schedule. ";" concatenates vertically
 AversiveCondition=repmat([true(20,1);false(20,1)],2,1); % This just makes a string of 20 true, 20 false for Aversive condition and repeats it 
-% (command: repmat(matrix,Rows,Columns))
+% (command: repmat(matrix,Rows,Columns)); 
+% repmat(..., 2, 1) repeats that 40×1 vector twice vertically (2×). So after repetition, you have 80×1:
+    % 1–20	true → Aversive (stable-first group 1)
+    % 21–40	false → Appetitive (stable-first group 2)
+    % 41–60	true → Aversive (volatile-first group 3)
+    % 61–80	false → Appetitive (volatile-first group 4)
 
 % Now we need to draw learning rates and temperatures in order to test
 % whether those values can be recovered from simulated agents with our
@@ -345,10 +415,23 @@ AversiveCondition=repmat([true(20,1);false(20,1)],2,1); % This just makes a stri
 % temparatures and learning rates. In This examples lets take learning
 % rates in between 0.001 and 1. Inverse Temperature will vary between 0.001
 % and 1 for now
-minPossibleLR=0.001;   %Define lowest possible Learning rate
-maxPossibleLR=1;       %Define largest possible learning rate
+minPossibleLR=0.001;   % Define lowest possible Learning rate
+maxPossibleLR=1;       % Define largest possible learning rate
+
+% function normrnd(mu, sigma, m, n)
+% generates random numbers from a normal (Gaussian) distribution with:
+% mu → mean of the distribution
+% sigma → standard deviation
+% m, n → size (rows × columns) of the output matrix
 
 sampledinverseTemps=log(1+abs(normrnd(0,.7,length(Stable1st),1)));
+%| Code                                   | Explanation                                                                                                                                                                                                                                              |
+%| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+%| `normrnd(0, .7, length(Stable1st), 1)` | Draws a random number from a **normal distribution** with mean 0 and standard deviation 0.7, once for each agent (so 80 total, since `length(Stable1st)=80`).                                                                                            |
+%| `abs(...)`                             | Takes the absolute value, because inverse temperature β should not be negative (negative values would flip preferences).                                                                                                                                 |
+%| `1 + abs(...)`                         | Adds 1 so we don't take the log of 0 (and to shift all values to be positive).                                                                                                                                                                           |
+%| `log(...)`                             | Applies a **log-transform** to make the distribution more right-skewed (lots of small βs, few large βs). This roughly mimics how inverse temperatures are distributed in real human data (many people are somewhat noisy, a few are very deterministic). |
+% Result: You get 80 random positive values for inverse temperature (β), mostly between ~0.1 and 1, with a long tail.
 
 sampledLearningrates=normrnd(0.3,.2,length(Stable1st),1);   % Sample learning rates as a normal distribution with mean 0.3 and std of 0.7. 
  %Note, we don't know whether true learning rates will be normally distributed, but in the simulation we want to know whether we could recover
@@ -356,6 +439,8 @@ sampledLearningrates=normrnd(0.3,.2,length(Stable1st),1);   % Sample learning ra
  %is a good working assumption
 
 % Make sure Learning rates are bound between 0.001 and 1
+% Any α ≤ 0 is replaced by 0.001
+% Any α > 1 is replaced by 1
 sampledLearningrates(sampledLearningrates<=0)=minPossibleLR;   
 sampledLearningrates(sampledLearningrates>1) =maxPossibleLR;
 
@@ -384,10 +469,22 @@ title('inverse T')
 set(gca,'Fontsize',16);
 ylabel('Number (Histogram)')
 
+%% Core of simulation loop 
+
+%For 80 agents
+
+    % This code creates artificial participants (agents) who:       
+    % - Experience a sequence of trials (like your real participants would),
+    % - Learn from feedback using their own learning rate (α),
+    % - Make choices based on softmax decision noise (β = inverse temperature).
+    % - By simulating 80 such agents, you can later test:   
+      % "If real humans behaved like this, could my model recover their parameters?"
+
 
 % (Hopefully) good simulation
-NrOfAgents=length(sampledinverseTemps) ;
+NrOfAgents=length(sampledinverseTemps) ; % length(sampledLearningrates) would also give 80.
 
+%Each variable stores a key internal variable for every trial × every agent.
 probOpt1    = nan(numtrials,NrOfAgents);  
 probOpt2    = nan(numtrials,NrOfAgents);  
 delta               = nan(numtrials,NrOfAgents); 
@@ -426,30 +523,46 @@ for isub=1:NrOfAgents
         isStableBlock(:,isub)      =[true(size(trueProbabilityOpt1,1)./2,1);false(size(trueProbabilityOpt1,1)./2,1)];
     end
     
+    % isStableBlock:creates a column vector of logical values (true/false) marking which trials belong to a stable block.
+        % For stable-first blocks: the first half of trials is stable (true), the second half volatile (false).
+        % For volatile-first blocks: the first half volatile (false), the second half stable (true).
+        % This ensures each agent has a trial-by-trial vector indicating stability.
+            % size(...)/2: divides by 2 to split the trials into first half and second half, 40 and 40
+            % true(n,1) and false(n,1) -> true(40,1) → a 40×1 column vector of true. false(40,1) → a 40×1 column vector of false. ";" = concatenation
+
     % Learn from outcomes with specified learning rate
-    probOpt1(1,isub) = 0.5;
-    for t = 1:numtrials-1
+     
+    % Initialize choice proba:
+    probOpt1(1,isub) = 0.5; % agent starts with no knowledge
+    
+    % Update beliefs using a learning rule - Rescorla-Wagner / delta-rule update
+    for t = 1:numtrials-1 % he code updates the belief for the next trial; so it looks into previous the trial
         delta(t,isub) = opt1Rewarded(t,isub)-probOpt1(t,isub);
         probOpt1(t+1,isub) = probOpt1(t,isub) + sampledLearningrates(isub)*delta(t,isub);
     end
-    probOpt2(:,isub)=1-probOpt1(:,isub);       
-    % Combine Probability and Magnitudes
+    probOpt2(:,isub)=1-probOpt1(:,isub); % Option 2's probability is just the opposite of option 1  
+
+    % Compute utilities - Combine Probability and Magnitudes
     utility1(:,isub)=magOpt1(:,isub).*probOpt1(:,isub);
     utility2(:,isub)=magOpt2(:,isub).*probOpt2(:,isub);
+
     % Generate Choice Probabilities using specified Softmax inverse Temperature
     inverseT=sampledinverseTemps(isub);
     ChoiceProbability1(:,isub)=(exp(utility1(:,isub).*inverseT))./(exp(utility1(:,isub).*inverseT) + exp(utility2(:,isub).*inverseT));
     ChoiceProbability2(:,isub)=1-ChoiceProbability1(:,isub);   
+
     % Generate Choices again from Choice Probabilities
     RandNrs=rand(length(ChoiceProbability1),1);
     Chosen1=RandNrs<=ChoiceProbability1(:,isub);
     ChosenB=~Chosen1;
     SimulatedChoices1(:,isub)=Chosen1;
 end
-
+    % Compute "true" expected utility (objective)
  ActualUtilityA=trueProbabilityOpt1.*magOpt1;
 ActualUtilityB=(1-trueProbabilityOpt1).*magOpt2;
 DecisionVariableObjective=ActualUtilityA-ActualUtilityB;
+    
+%% Plot subjective utilive
        
 
 % Now we can plot whether the choices we generated roughly follow the
@@ -483,8 +596,18 @@ simulatedData.chosenOptionRewarded=SimulatedChoices1==opt1Rewarded;
 simulatedData.pointswon           =simulatedData.chosenOptionRewarded.*(SimulatedChoices1.*magOpt1 + ~SimulatedChoices1.*magOpt2);
 simulatedData.isStableBlock       =isStableBlock;
 
+%% PLOT with fewer samples (still SUBJECTIVE)
+
+% What:
+    % Repeats simulation but only with the first 40 trials per agent.
+    % Generates choices, utilities, decision variables, and binned plots.
+
+% Why:
+    % Demonstrates the effect of limited trial numbers on simulated behavior and parameter recovery.
+    % Useful to understand the importance of sample size in modeling experiments.
 
 
+% For 40 agents
 % Now a simulation with too few samples. We just take the first 40 trials of each schedule
 trialsforShort=40;
 NrOfAgents=length(sampledinverseTemps) ;
@@ -572,9 +695,6 @@ set(gca,'Fontsize',16);
 
 
 
-
-
-
 %% This bit you dont have to look at. It simply plots the aggregate behaviours etc.
 
 
@@ -623,13 +743,37 @@ ylabel('Probability of being correct');
 xlim([0.5 2.5])
 
 %% Win/Stay Lose/Shift
-ChoiceRewarded=opt1Rewarded==SimulatedChoices1;
+
+% Step 1: Determine if the previous choice was rewarded
+    % opt1Rewarded is the actual outcome for option 1 (1 = rewarded, 0 not rewarded). LOADED in the beginnign
+    % SimulatedChoices1 indicates whether the agent chose option 1 (1 = chose, 0 = didn't).
+    % ChoiceRewarded is a matrix indicating whether the agent's choice was rewarded on each trial.
+ChoiceRewarded=opt1Rewarded==SimulatedChoices1;% 1 if the agent's choice matches the reward status of option 1, and 0 otherwise.
+% == operator – In MATLAB, this compares two arrays element-wise and returns 1 (true) if the elements are equal, and 0 (false) if not.
+
 subplot(2,1,2);
+% Stay measures whether the agent repeated the same choice as the previous trial.
+    % SimulatedChoices1(1:end-1,:) → all trials except the last
+    % SimulatedChoices1(2:end,:) → all trials except the first
+    % == → checks if choice repeated from previous trial
+    % [nan(1,size(SimulatedChoices1,2)); ... ] → adds a NaN for the first trial (no previous trial to compare)
+            % 1 → agent stayed with previous choice
+            % 0 → agent switched
+            % NaN → first trial
 Stay=[nan(1,size(SimulatedChoices1,2));SimulatedChoices1(1:end-1,:)==SimulatedChoices1(2:end,:)];
-LastTrialReward=[nan(1,size(ChoiceRewarded,2));ChoiceRewarded(1:end-1,:)];
+
+% Whether agent received a reward.
+    % 1:end-1 → takes all rows except the last. Because we want to shift the reward information down so that trial 2 can "see" trial 1's reward.
+    % nan(1, size(ChoiceRewarded,2)) → a row of NaN with same number of columns (agents)
+    % Why? The first trial has no previous trial, so its "last trial reward" is undefined → we use NaN
+        % This "shift down by one row and pad with NaN" is a common trick in MATLAB 
+        % to create a vector of "previous trial values" aligned with the current trial. 
+        % It's used for trial-by-trial analyses, like Win-Stay / Lose-Shift.
+   LastTrialReward=[nan(1,size(ChoiceRewarded,2));ChoiceRewarded(1:end-1,:)];
+
 for a=1:size(ChoiceRewarded,2)
-    WinStay(a) =mean(Stay(LastTrialReward(:,a)==1,a));
-    LoseStay(a)=mean(Stay(LastTrialReward(:,a)==0,a));
+    WinStay(a) =mean(Stay(LastTrialReward(:,a)==1,a)); % LastTrialReward(:,a)==1 → selects trials where last trial was rewarded; Stay(...) → takes whether agent stayed after those trials
+    LoseStay(a)=mean(Stay(LastTrialReward(:,a)==0,a)); % LoseStay → mean probability of staying after an unrewarded trial (same logic)
 end
 
 subplot(2,1,2);hold on;
@@ -646,20 +790,70 @@ ylabel('Probability of Staying');
 
 
 %% Optional Bit. Multiple regressions
+
 NrBack=10;                                          % How many trials to go back in tracking the outcome history.
-for isub=1:size(opt1Rewarded,2)
-    for b=1:NrBack
-        Pastopt1Rewarded(:,b,isub)=[nan(b,1);opt1Rewarded(1:end-b,isub)];
+
+% Loop over subjects and trials to build past reward history
+  % b is the number of trials back you are looking at. b = 1 → t-1 (last trial), b = 2 → t-2 (2 trials ago)
+for isub=1:size(opt1Rewarded,2)% loop over subjects/agents
+    for b=1:NrBack % loop over how many trials back you want to look
+            Pastopt1Rewarded(:,b,isub)=[nan(b,1);opt1Rewarded(1:end-b,isub)]; % shift the rewards down by b trials, 
+                                            % nan(b,1) → creates a column vector of b NaNs. Because for the first b trials, there is no trial b steps back.
+                                            % opt1Rewarded(1:end-b,isub) →
+                                            % takes the reward history of
+                                            % subject isub from trial 1 to trial end-b, shifting the reward history down by b trials
+                                            % Pastopt1Rewarded(:,b,isub) → 3D matrix:   
+                                                % Rows → trials
+                                                % Columns → "how many trials back" (t-1, t-2, … t-10)
+                                                % 3rd dim → subjects
+                                            % Result: Pastopt1Rewarded(trial, b, subject) tells you if trial b trials ago was rewarded.
     end
 end
+
+% Label the design matrix
 DesignMatrixLabels={'t-1';'t-2';'t-3';'t-4';'t-5';'t-6';'t-7';'t-8';'t-9';'t-10'};
+
+% Fit logistic regression per subject
 for isub=1:size(opt1Rewarded,2)
     % Take out?
-    y=SimulatedChoices1(:,isub);
+    y=SimulatedChoices1(:,isub);  %whether the agent chose option 1 (1) or not (0)
     DesignMatrix=Pastopt1Rewarded(:,:,isub);
     %
-[betaweights(:,isub),devf,stats{isub}]=glmfit(DesignMatrix,y,'binomial','link','logit');
+[betaweights(:,isub),devf,stats{isub}]=glmfit(DesignMatrix,y,'binomial','link','logit'); % logistic regression; smaller deviance (defv) = better fit
+
+%DesignMatrix → matrix of predictors
+%Each column is a feature (here: reward history t-1, t-2, … t-10)
+% Each row is a trial
+
+%betaweights(t-1) → effect of reward 1 trial back
+%betaweights(t-2) → effect of reward 2 trials back, etc.
+
+%Key idea:
+%If betaweight(t-1) is positive → if last trial was rewarded, subject more likely to repeat choice ("Win-Stay")
+% If negative → more likely to switch ("Win-Shift")
+
 end
+
+% combine betaweights and stats to see which past trials significantly influence choice:
+% Positive β → past reward increases probability of staying
+for b = 2:size(betaweights,1) % skip intercept
+    fprintf('Trial t-%d: beta=%.3f, p=%.3f\n', b-1, betaweights(b,isub), stats{isub}.p(b));
+end
+
+
+% SE
+stats{isub}.se
+stats{isub}.p
+stats{isub}.t
+yhat = glmval(betaweights(:,isub), DesignMatrix, 'logit'); % predicted probabilitues; 
+% glmval takes the coefficients (betaweights) and applies the logistic function to the linear combination of predictors in DesignMatrix.
+% predicted probability that the subject will choose option 1 on that trial, given the past rewards.
+% Values close to 1 → model predicts the subject will almost certainly choose option 1.
+
+
+
+
+
 figure('color',[1 1 1],'name','Results of Multiple regression');
 hold on;
 plotData=betaweights(2:end,:);
