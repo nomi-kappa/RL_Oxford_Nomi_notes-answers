@@ -83,6 +83,9 @@ if plot_fits
     ylabel('Reward probability');
     ylim([-0.1 1.1]);
     plot(predictionOpt1,'b'); % note: the 'b' tells matlab to plot in blue
+    set(gcf, 'Color', 'w');      % sets figure background NK
+set(gca, 'Color', 'w');      % sets axes background NK
+
 end
 
 

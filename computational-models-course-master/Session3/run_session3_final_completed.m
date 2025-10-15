@@ -171,7 +171,12 @@ set(gca,'XTick',[1 2],'XTickLabel',{'Win Stay';'Lose Stay'},'Fontsize',16)
 ylabel('Probability of Staying');title('Stable');
 
 % If you are curious, you can do some very basic t-test here...
+        %Since both vectors have one value per participant, MATLAB compares them within subjects
 [p,h,stats]=ttest(WinStayVol,WinStayStb)
+
+% mean(WinStayVol - WinStayStb) = -0.0685 % participants stayed slightly less in volatile blocks
+
+
 
 %% 3.2 MODEL FITTING USING GRID SEARCH
 %% 3.2.1 Developing an intuition for the goodness of a fit

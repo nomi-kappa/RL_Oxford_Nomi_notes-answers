@@ -15,7 +15,7 @@ clear all;close all; % close any open figures and delete variables
 % load it in the same way as we did for the simulated data in week 2.
 
 % Adjust the basepath to your directory
-basepath='C:/Users/mkleinflugge/Dropbox/Documents/Work/Documents/teaching/BlockPractical/Sess3_Miriam/';
+basepath='/Users/nomikikoutsoubari/Documents/GitHub/RL_Oxford_Nomi_notes-answers/computational-models-course-master/Session3/';
 load(fullfile(basepath,'data.mat'));
 warning off;
 
@@ -24,6 +24,9 @@ warning off;
 % Let's plot an individual's data first, you can choose which one;
 % try a few different participants and see if you can find some that tracked the
 % probabilities really well and others that did not
+
+size(data.trueProbability) % 200 x 64 participants
+
 plotSubj = 12;
 
 % Go through this cell line by line and remind yourself what the
@@ -36,13 +39,15 @@ xlabel('Trials');
 ylabel('Reward probability');
 ylim([-0.1 1.1]);
 legend('True Probability','Outcomes received','Choice');
+set(gcf, 'Color', 'w');      % sets figure background NK
+set(gca, 'Color', 'w');      % sets axes background NK
 
 
 %% 3.1.1 Calculating accuracy
 
 % There is not just one way to do this but a good starting point is to look
-% at some basic metrics such as the overall accuracy
-% and see if any participants fall out of 3SD's of the mean
+% at some basic metrics such as the OVERALL ACCURACY
+% and see if any participants fall out of 3SD's!!! of the mean
 
 % Accuracy
 % We will use a simple definition here which is whether the participant
@@ -50,8 +55,36 @@ legend('True Probability','Outcomes received','Choice');
 % What would be a better way to do this?
 % What does this logical statement do?
 % Write down in your workbook in which cases it gives a '1' or a '0'
-data.accuracy = (data.trueProbability.*data.magOpt1 > (1-data.trueProbability).*data.magOpt2) == data.opt1Chosen;
-data.meanAccuracy = nanmean(data.accuracy,1);
+
+% Calculate accuracy based on true probabilities and choices
+data.accuracy = (data.trueProbability.*data.magOpt1 > (1-data.trueProbability).*data.magOpt2) == data.opt1Chosen; data.accuracy
+%What it does: evaluates to 1 (true) if the first option is indeed the one with the higher utility, and 0 (false) otherwise.
+% The result is then compared to data.opt1Chosen, which indicates whether the participant chose option 1. 
+% This results in a logical array data.accuracy where 1 indicates a correct choice and 0 indicates an incorrect choice.
+
+
+% Compute mean accuracy, ignoring NaN values
+data.meanAccuracy = nanmean(data.accuracy,1);data.meanAccuracy
+
+
+% You might consider additional metrics such as precision, recall, or F1-score for a more comprehensive evaluation of participant performance.
+% Visualizing the distribution of accuracies can help identify outliers beyond 3 standard deviations from the mean.
+class(data.accuracy)
+size(data.accuracy)
+
+
+figure;
+boxplot(double(data.accuracy));  % convert logical → double or else it will give an error as boxplot wants numbers
+ylabel('Accuracy');
+title('Boxplot of Accuracies');
+grid on;
+
+figure;
+histogram(data.meanAccuracy, 10); % 10 bins
+xlabel('Mean Accuracy');
+ylabel('Number of Participants');
+title('Histogram of Participant Accuracies');
+grid on;
 
 %% 3.1.2 Plotting accuracy for all/stable/volatile trials
 % Next we can look at accuracy for just the stable or volatile trials
@@ -84,23 +117,66 @@ xlabel('Accuracy');ylabel('nSubj');
 % appear bright yellow or dark blue
 AccZscored=[zscore(data.meanAccuracyStable);zscore(data.meanAccuracyVol);zscore(data.meanAccuracy)]';
 figure;imagesc(AccZscored);colorbar;caxis([-3,3]);
-keyboard; % add title,xlabel,ylabel here
+title('Colormap for z-scored accuracy'); %TO BE ADDED BY STUDENT
+xlabel('Block Type');ylabel('Subjects'); %TO BE ADDED BY STUDENT
+set(gca,'XTick',[1 2 3],'XTickLabel',{'Stable';'Volatile';'Both'},'Fontsize',16); %TO BE ADDED BY STUDENT
+
+% a "tick" is a mark on an axis that indicates a specific value or position. Ticks usually come with labels to show numbers, categories, or names.
+
+
 
 %% 3.1.3 Plotting reaction times, mean and variance
-% This cell plots the mean and std of the reaction time across trials for
+% This cell plots the mean and SD of the RTs across trials for
 % each participant, again this is mostly to eyeball the data and get a feel
 % for everyone's performance
+data
 
+% Mean and SD of reaction times
 figure;
 subplot(2,3,1:2);plot(mean(data.reactionTime));title('mean RT');ylabel('mean RT');ylim([0.5,2]);
 subplot(2,3,4:5);plot(std(data.reactionTime));title('std RT');ylabel('std RT');ylim([0,8]);
 xlabel('Subjects');
 
-subplot(2,3,3);histogram(mean(data.reactionTime),[0.5:0.1:2],'Orientation','horizontal');ylim([0.5,2]);title('Histogram');
+%Histograms of mean and SD RTs
+subplot(2,3,3);histogram(mean(data.reactionTime),[0.5:0.1:2],'Orientation','horizontal');ylim([0.5,2]);title('Histogram'); % y-axis = RT values (0.5 → 2 s); x-axis = number of participants in each bin
 subplot(2,3,6);histogram(std(data.reactionTime),[0:0.5:8],'Orientation','horizontal');ylim([0,8]);xlabel('nSubj');
+% The x-axis shows the bin values (the RT or SD ranges). So, many ppts may be in one bin.
+
 
 meanRTZscored = zscore(mean(data.reactionTime));
 stdRTZscored = zscore(std(data.reactionTime));
+%Interpretation:
+    % 0 → participant at the group mean
+    % +1 → participant 1 SD above mean
+    % -1 → participant 1 SD below mean
+    % Helps you identify outliers in a normalized way, independent of units.
+
+    % plot z-scores
+    figure;
+subplot(2,1,1);
+plot(meanRTZscored, 'o-');
+xlabel('Participant');
+ylabel('Z-scored mean RT');
+title('Z-scored Mean Reaction Times');
+
+subplot(2,1,2);
+plot(stdRTZscored, 'o-');
+xlabel('Participant');
+ylabel('Z-scored SD RT');
+title('Z-scored RT Variability');
+
+% Heatmap of z-scores
+RTZmatrix = [meanRTZscored; stdRTZscored]';  % participants × 2
+figure;
+imagesc(RTZmatrix);
+colorbar;
+caxis([-3,3]);
+xlabel('Measure');
+ylabel('Participant');
+xticks([1 2]);
+xticklabels({'Mean RT','SD RT'});
+title('Z-scored Reaction Times');
+
 
 %% 3.1.4 Identify outliers using the standard deviation
 
@@ -115,16 +191,30 @@ discardThresh = 2.5;
 % all the participants that have a '1' in any of the criteria, i.e. where
 % the sum is larger than 0
 data.discardSubj = sum([abs(AccZscored) abs(meanRTZscored)' abs(stdRTZscored)']>discardThresh,2)>0;
+        % abs(...) > discardThresh: Converts each metric into a logical 0/1: 1 if the absolute z-score exceeds 2.5, 0 otherwise
+        % Concatenation [ ... ] Combines all criteria into one matrix
+        % Size = participants × (3+1+1 = 5 metrics)
+        % sum(...,2) Sums across columns (metrics) for each participant. If the sum > 0 → participant exceeded threshold in at least one metric
+        % > 0 Converts the sum into a logical vector 1 = participant is an outlier, 0 = not an outlier
+
 
 % Add one line of code here to check how many subjects were excluded with the threshold we used
 % the command 'find' might be useful which finds any element of a vector that
 % is not zero
-keyboard; % Add code here 
+
+% Add code here 
+% % Assuming data.discardSubj is a logical array where 1 indicates an outlier
+numExcludedSubjects = sum(data.discardSubj);
+fprintf('Number of excluded subjects: %d\n', numExcludedSubjects);
+
+%alternative
+length(find(data.discardSubj)) %TO BE ADDED BY STUDENT
+
 
 % This plots a red circle on top of the mean accuracy IF there is a
 % subject that is an outlier
 figure;plot(AccZscored);hold on;plot(meanRTZscored);plot(stdRTZscored);
-plot(find(data.discardSubj),3*ones(length(find(data.discardSubj))),'ro');
+plot(find(data.discardSubj),3*ones(length(find(data.discardSubj))),'ro'); %adding a marker at a fixed height (y = 3); 3*ones(...) → multiplies by 3, so all values = 3. usually for plotting on a y-axis at a fixed value, e.g., to mark outliers at a reference line (like 3*SD).
 title('All criteria for each subject (dots mark outliers)');
 xlabel('Subjects');ylabel('zscore');
 legend('Accuracy stable','Accuracy vol','Accuracy all','mean RT','std RT','outliers');
@@ -135,11 +225,40 @@ legend('Accuracy stable','Accuracy vol','Accuracy all','mean RT','std RT','outli
 % line by line. 
 
 % Here it first calculates whether subjects stayed after a win or loss
+
+% How often repeats previous choice 
 Stay=[nan(1,size(data.opt1Chosen,2));data.opt1Chosen(1:end-1,:)==data.opt1Chosen(2:end,:)];
+  %data.opt1Chosen(1:end-1,:) == data.opt1Chosen(2:end,:): compares each trial with the next trial for each participant:
+
+
+% Whether previous trial is rewarded
 LastTrialReward=[nan(1,size(data.chosenOptionRewarded,2));data.chosenOptionRewarded(1:end-1,:)];
-for a=1:size(LastTrialReward,2)
-    WinStay(a) = mean(Stay(LastTrialReward(:,a)==1,a));
-    LoseStay(a)= mean(Stay(LastTrialReward(:,a)==0,a));
+    % data.chosenOptionRewarded is 1 if the participant got a reward on that trial, 0 if not.
+    % We shift it by one trial (using 1:end-1) to represent the reward outcome of the previous trial.
+        % nan(1, size(data.chosenOptionRewarded,2))
+        % → makes a single top row of missing values (NaNs)
+        % → so we can shift the data down while keeping the matrix the same size
+        % → representing "reward from previous trial" for each participant.
+
+        % the 2 here:
+            % size(data.chosenOptionRewarded, 1) → 200   % number of rows (trials)
+            % size(data.chosenOptionRewarded, 2) → 64    % number of columns (participants)% 
+            % We use 2 because we want to make a row of NaNs that matches the number of participants (columns) — so that it can be stacked on top of the data.
+
+% LOOP calculates, for each participant, the probability of staying with the same choice after a win or a loss — overall, 
+% and separately for stable and volatile blocks.
+for a=1:size(LastTrialReward,2) % size(LastTrialReward, 2) → number of columns (participants); if you have 64 ppts, the loop runs a = 1 to 64.
+   
+     % proba of stay after a win
+    WinStay(a) = mean(Stay(LastTrialReward(:,a)==1,a)); % == 1 → finds the trials where the previous trial was rewarded (a win).
+                                                        % This gives a logical vector (1s and 0s).
+                                                        % WinStay(a) = %  of times participant (it averages them) a repeated their choice after being rewarded.
+                                                        % : → All trials for participant a.
+      % proba of stay after a loss                                                  
+   LoseStay(a)= mean(Stay(LastTrialReward(:,a)==0,a));  % ==0 means: select only the trials where the previous trial was not rewarded (i.e. a loss).
+                                                        % "Give me all trials for ppt a where the previous trial was a loss, and tell me whether they stayed (1) or switched (0)."
+                                                        % 
+                                                        
     WinStayVol(a) = mean(Stay(LastTrialReward(:,a)==1 & data.isStableBlock(:,a)==0,a));
     LoseStayVol(a)= mean(Stay(LastTrialReward(:,a)==0 & data.isStableBlock(:,a)==0,a));
     WinStayStb(a) = mean(Stay(LastTrialReward(:,a)==1 & data.isStableBlock(:,a)==1,a));
@@ -189,17 +308,18 @@ subjN = 12;
 % Let's run it twice with different alpha & beta values just to visualize 
 % the results of the RLmodel. Note down which sets of parameters you think 
 % fits this participant better -- see your notebook.
-error = RLModel([0.15,0.02],subjN,data,1)
+error = RLModel([0.15,0.02],subjN,data,1) % [0.15, 0.02]	RL parameters: [alpha, beta]
 error = RLModel([0.6,0.08],subjN,data,1)
 
-% If you want to try using two different learning rates for the stable 
+% If you want to try using two different learning rates (2 alphas!)for the stable 
 % and volatile phase, you can do that by giving RLmodel three parameter 
 % values (the first two are alpha stable/alpha volatile, third one is beta)
 % Just uncomment the line below...
-% error = RLModel([0.1,0.3,0.1],subjN,data,1)
+ error = RLModel([0.1,0.3,0.1],subjN,data,1)
 
+% E!!!!rror between green (choice prob) and red (choice) is small…!!!!
 
-%% 3.2.2 Grid search 
+%% 3.2.2 Grid search to find the combination of parameters that finds the smallest error
 % Now, let us try and determine the best-fitting learning rate and 
 % inverse temperature parameter using a grid search. In other words, 
 % we define a grid of values for LR and invT and see which 'error' value 
@@ -213,16 +333,28 @@ subjN = 12;
 % These two lines of code determine which values form part of the grid
 % search. You can make the grid finer by making the step sizes smaller or
 % coarser by making them larger (and thus including less values).
-gridLearningRate = [0.1:0.1:1];%[0.05:0.05:1];
+gridLearningRate = [0.1:0.1:1];
+%[gridLearningRate = [0.05:0.05:1];
 gridInverseT = [0.01:0.03:0.3];
 
-% Now we run two for-loops: one over all alpha and one over all beta
+% Now we run two for-loops: 
+% - one over all alpha and 
+% - one over all beta
 % starting values, and we save the logLL (error term) for each.
+
+%It creates a matrix of zeros called logLLGrid with a size based on the number of 
+% learning rates and inverse temperatures in your grid.
+% zeros(m,n) → makes an m × n matrix filled with zeros.
+% So logLLGrid(a,v) will later store the log-likelihood of the model for the a-th α and b-th β.
+    % After this, logLLGrid contains the fit quality for every α-β pair, 
+    % so you can find the combination that minimizes the error or maximizes likelihood.
+
+
 logLLGrid = zeros(length(gridLearningRate),length(gridInverseT));
 for a=1:length(gridLearningRate)
-    LR=gridLearningRate(a);
+    LR=gridLearningRate(a); % LR = the current α value being tested
     for b=1:length(gridInverseT)
-        invT=gridInverseT(b);
+        invT=gridInverseT(b); % the current b value being tested
         logLLGrid(a,b)= RLModel([LR,invT],subjN,data,0);
     end
 end
@@ -236,7 +368,10 @@ title(['Subject ',num2str(subjN)]);colorbar;
 set(gca,'XTick',[1:length(gridInverseT)],'XTickLabel',gridInverseT)
 set(gca,'YTick',[1:length(gridLearningRate)],'YTickLabel',gridLearningRate)
 
+% Brighter/hotter colors → higher log-likelihood = better fit
+%  Darker/cooler colors → lower log-likelihood = worse fit
 
+%%%%%%%%%%%%%%%%% HERE I AM....! %%%%%%%%%%%%%%%%%
 
 %% 3.2.3 Grid search: separately for volatile & stable
 % Here we do a gridsearch again but separately on stable & volatile blocks
